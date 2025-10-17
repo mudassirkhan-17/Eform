@@ -1,10 +1,18 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { FormSection } from '@/components/FormSection'
 import { FormData } from '@/types/form'
 import { generatePDF } from '@/lib/pdf'
+
+// Extend Window interface for Google Maps
+declare global {
+  interface Window {
+    google: any
+  }
+}
 
 export default function HomePage() {
   const [isSubmitted, setIsSubmitted] = useState(false)
@@ -15,6 +23,44 @@ export default function HomePage() {
   const [smartyData, setSmartyData] = useState<any>(null)
   const [showSidePanelData, setShowSidePanelData] = useState(false)
   const [searchAddress, setSearchAddress] = useState('')
+  const [agentProfile, setAgentProfile] = useState<string>('')
+  const router = useRouter()
+  const addressInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    // Get agent profile from localStorage
+    const profile = localStorage.getItem('agentProfile')
+    if (profile) {
+      setAgentProfile(profile)
+    }
+  }, [])
+
+  // EXPERIMENTAL: Super simple Google Autocomplete - no fancy stuff
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (window.google?.maps?.places && addressInputRef.current) {
+        try {
+          const autocomplete = new window.google.maps.places.Autocomplete(addressInputRef.current, {
+            types: ['address'],
+            componentRestrictions: { country: 'us' }
+          })
+          
+          autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace()
+            if (place.formatted_address) {
+              setSearchAddress(place.formatted_address)
+            }
+          })
+          
+          console.log('✅ Simple autocomplete ready')
+        } catch (err) {
+          console.log('Autocomplete failed:', err)
+        }
+      }
+    }, 1000) // Wait 1 second for Google to load
+
+    return () => clearTimeout(timer)
+  }, [])
   
   const {
     register,
@@ -377,14 +423,35 @@ export default function HomePage() {
     )
   }
 
+  const handleLogout = () => {
+    localStorage.removeItem('agentProfile')
+    localStorage.removeItem('agentLoginTime')
+    router.push('/auth')
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-7xl mx-auto h-full">
-        {/* Header matching PDF */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Mckinney & Co. Insurance</h1>
-          <h2 className="text-xl font-semibold text-gray-600">Convenience Store Application</h2>
+    <div className="min-h-screen bg-gray-50">
+      {/* Agent Header - Minimal Black Bar */}
+      <div className="bg-black text-white py-3 px-6 flex justify-between items-center">
+        <div className="flex items-center space-x-3">
+          <div className="w-2 h-2 bg-white rounded-full"></div>
+          <span className="font-light tracking-wide">{agentProfile}</span>
         </div>
+        <button
+          onClick={handleLogout}
+          className="text-white hover:text-gray-300 transition-colors font-light text-sm tracking-wide"
+        >
+          Logout
+        </button>
+      </div>
+
+      <div className="py-8 px-4">
+        <div className="max-w-7xl mx-auto h-full">
+          {/* Header matching PDF */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Mckinney & Co. Insurance</h1>
+            <h2 className="text-xl font-semibold text-gray-600">Convenience Store Application</h2>
+          </div>
         
         {/* Test the side panel structure */}
         <div className="flex gap-8 relative min-h-[calc(100vh-200px)]">
@@ -396,19 +463,39 @@ export default function HomePage() {
                   <h2 className="text-2xl font-semibold mb-6">Convenience Store Insurance Application</h2>
                   
                   {/* Address Search Section */}
-                  <div className="mb-8 p-4 bg-blue-50 rounded-lg">
-                    <h3 className="text-lg font-medium mb-4">🏢 Property Address Lookup</h3>
+                  <div className="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-800">🏢 Property Address Lookup</h3>
                     <div className="flex gap-4">
                       <input
-                        value={searchAddress}
+                        ref={addressInputRef}
+                        id="address-autocomplete"
+                        type="text"
+                        autoComplete="off"
+                        className="flex-1 p-3 border border-gray-300 rounded-lg focus:border-black focus:ring-2 focus:ring-gray-200 transition-all"
+                        placeholder="Start typing address... (e.g., 4964 Lavista Rd)"
                         onChange={(e) => setSearchAddress(e.target.value)}
-                        className="flex-1 p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                        placeholder="Enter property address (e.g., 526 Flint River Rd, Jonesboro, GA)"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault() // Prevent form submission
+                            const address = addressInputRef.current?.value || ''
+                            if (address.trim()) {
+                              setSearchAddress(address)
+                              fetchData()
+                            }
+                          }
+                        }}
                       />
                       <button
-                        onClick={fetchData}
+                        onClick={() => {
+                          // Get value directly from input
+                          const address = addressInputRef.current?.value || ''
+                          if (address.trim()) {
+                            setSearchAddress(address)
+                            fetchData()
+                          }
+                        }}
                         disabled={isLoading}
-                        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center space-x-2"
+                        className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-2 font-medium"
                       >
                         {isLoading ? (
                           <>
@@ -1527,6 +1614,7 @@ export default function HomePage() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   )

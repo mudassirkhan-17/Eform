@@ -3,7 +3,25 @@ import { FormData } from '@/types/form'
 
 export const generatePDF = (formData: FormData) => {
   console.log('Generating PDF with data:', formData) // Debug log
-  const doc = new jsPDF()
+  co  // Alarm Section
+  yPos += 3
+  
+  drawCell(leftMargin, yPos, 16, rowHeight, 'Alarm', true, 6)
+  
+  // Burglar alarm
+  const burglarCS = formData.burglarAlarm?.centralStation ? '[X]' : '[ ]'
+  const burglarLocal = formData.burglarAlarm?.local ? '[X]' : '[ ]'
+  drawCell(leftMargin + 16, yPos, 16, rowHeight, 'Burglar', true, 6)
+  drawCell(leftMargin + 32, yPos, 30, rowHeight, `${burglarCS} Central Station`, false, 5)
+  drawCell(leftMargin + 62, yPos, 20, rowHeight, `${burglarLocal} Local`, false, 5)
+  
+  // Fire alarm  
+  const fireCS = formData.fireAlarm?.centralStation ? '[X]' : '[ ]'
+  const fireLocal = formData.fireAlarm?.local ? '[X]' : '[ ]'
+  drawCell(leftMargin + 82, yPos, 14, rowHeight, 'Fire', true, 6)
+  drawCell(leftMargin + 96, yPos, 30, rowHeight, `${fireCS} Central Station`, false, 5)
+  drawCell(leftMargin + 126, yPos, tableWidth - 126, rowHeight, `${fireLocal} Local`, false, 5)
+  yPos += rowHeight()
   
   // 1 inch = 72 points in PDF
   const margin = 72 / 2.54  // 1 inch margin (approximately 28 points)
@@ -19,11 +37,7 @@ export const generatePDF = (formData: FormData) => {
   
   // Helper function to draw bordered cell with proper text fitting
   const drawCell = (x: number, y: number, width: number, height: number, text: string, bold = false, fontSize = 6) => {
-    // Draw border with clean lines
-    doc.setDrawColor(0, 0, 0)
-    doc.setLineWidth(0.2) // Slightly thicker for clean, solid borders
-    doc.rect(x, y, width, height, 'S') // 'S' for stroke only
-    
+    doc.rect(x, y, width, height)
     doc.setFont('helvetica', bold ? 'bold' : 'normal')
     doc.setFontSize(fontSize)
     
@@ -113,8 +127,10 @@ export const generatePDF = (formData: FormData) => {
   })
   yPos += rowHeight
   
-  // Ownership Type Section - just checkboxes, no header row
+  // Ownership Type Section
   yPos += 1
+  drawCell(leftMargin, yPos, tableWidth, rowHeight, 'OWNER / TENANT / LESSOR\'S RISK / TRIPLE NET LEASE', true, 7)
+  yPos += rowHeight
   
   const ownershipTypes = [
     { key: 'owner', label: 'Owner', width: 47.5 },
@@ -127,7 +143,7 @@ export const generatePDF = (formData: FormData) => {
   ownershipTypes.forEach((type) => {
     const isSelected = formData.ownershipType === type.key
     const checkmark = isSelected ? '[X]' : '[ ]'
-    drawCell(leftMargin + xOffset, yPos, type.width, rowHeight, `${checkmark} ${type.label}`, false, 6)
+    drawCell(leftMargin + xOffset, yPos, type.width, rowHeight, `${checkmark} ${type.label}`, false, 7)
     xOffset += type.width
   })
   yPos += rowHeight
@@ -198,21 +214,21 @@ export const generatePDF = (formData: FormData) => {
   // Alarm Section
   yPos += 3
   
-  drawCell(leftMargin, yPos, 16, rowHeight, 'Alarm', true, 6)
+  drawCell(leftMargin, yPos, 18, rowHeight, 'Alarm', true, 6)
   
   // Burglar alarm
   const burglarCS = formData.burglarAlarm?.centralStation ? '[X]' : '[ ]'
   const burglarLocal = formData.burglarAlarm?.local ? '[X]' : '[ ]'
-  drawCell(leftMargin + 16, yPos, 16, rowHeight, 'Burglar', true, 6)
-  drawCell(leftMargin + 32, yPos, 28, rowHeight, `${burglarCS} Central Station`, false, 5)
-  drawCell(leftMargin + 60, yPos, 20, rowHeight, `${burglarLocal} Local`, false, 5)
+  drawCell(leftMargin + 18, yPos, 18, rowHeight, 'Burglar', true, 6)
+  drawCell(leftMargin + 36, yPos, 32, rowHeight, `${burglarCS} Central Station`, false, 5)
+  drawCell(leftMargin + 68, yPos, 22, rowHeight, `${burglarLocal} Local`, false, 5)
   
   // Fire alarm  
   const fireCS = formData.fireAlarm?.centralStation ? '[X]' : '[ ]'
   const fireLocal = formData.fireAlarm?.local ? '[X]' : '[ ]'
-  drawCell(leftMargin + 80, yPos, 14, rowHeight, 'Fire', true, 6)
-  drawCell(leftMargin + 94, yPos, 28, rowHeight, `${fireCS} Central Station`, false, 5)
-  drawCell(leftMargin + 122, yPos, tableWidth - 122, rowHeight, `${fireLocal} Local`, false, 5)
+  drawCell(leftMargin + 90, yPos, 15, rowHeight, 'Fire', true, 6)
+  drawCell(leftMargin + 105, yPos, 32, rowHeight, `${fireCS} Central Station`, false, 5)
+  drawCell(leftMargin + 137, yPos, 53, rowHeight, `${fireLocal} Local`, false, 5)
   yPos += rowHeight
   
   yPos += 3 // Add space before three-column section
