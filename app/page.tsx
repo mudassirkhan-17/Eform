@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form'
 import { FormSection } from '@/components/FormSection'
 import { FormData } from '@/types/form'
 import { generatePDF } from '@/lib/pdf'
+import { AreaMeasurementModal } from '@/components/AreaMeasurementModal'
 
 // Extend Window interface for Google Maps
 declare global {
@@ -24,6 +25,8 @@ export default function HomePage() {
   const [showSidePanelData, setShowSidePanelData] = useState(false)
   const [searchAddress, setSearchAddress] = useState('')
   const [agentProfile, setAgentProfile] = useState<string>('')
+  const [showAreaMeasurementTool, setShowAreaMeasurementTool] = useState(false)
+  const [measuredArea, setMeasuredArea] = useState<number | null>(null)
   const router = useRouter()
   const addressInputRef = useRef<HTMLInputElement>(null)
 
@@ -61,6 +64,59 @@ export default function HomePage() {
 
     return () => clearTimeout(timer)
   }, [])
+
+  // Initialize measurement map when modal opens
+  useEffect(() => {
+    if (showAreaMeasurementTool && window.google?.maps?.drawing) {
+      setTimeout(() => {
+        const map = new window.google.maps.Map(document.getElementById('measurement-map'), {
+          zoom: 19,
+          center: { 
+            lat: smartyData?.data?.latitude || 33.580, 
+            lng: smartyData?.data?.longitude || -84.386 
+          },
+          mapTypeId: 'satellite',
+        })
+
+        let polygon: any = null
+
+        const drawingManager = new window.google.maps.drawing.DrawingManager({
+          drawingMode: window.google.maps.drawing.OverlayType.POLYGON,
+          drawingControl: true,
+          drawingControlOptions: {
+            position: window.google.maps.ControlPosition.TOP_CENTER,
+            drawingModes: ['polygon'],
+          },
+          polygonOptions: {
+            editable: true,
+            strokeWeight: 2,
+            fillOpacity: 0.4,
+            fillColor: '#FF0000',
+            strokeColor: '#FF0000',
+          },
+        })
+
+        drawingManager.setMap(map)
+
+        function calculateArea(poly: any) {
+          const areaMeters = window.google.maps.geometry.spherical.computeArea(poly.getPath())
+          const areaFeet = areaMeters * 10.7639
+          setMeasuredArea(areaFeet)
+        }
+
+        window.google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event: any) {
+          if (event.type === 'polygon') {
+            if (polygon) polygon.setMap(null)
+            polygon = event.overlay
+            calculateArea(polygon)
+
+            window.google.maps.event.addListener(polygon.getPath(), 'set_at', () => calculateArea(polygon))
+            window.google.maps.event.addListener(polygon.getPath(), 'insert_at', () => calculateArea(polygon))
+          }
+        })
+      }, 300)
+    }
+  }, [showAreaMeasurementTool, smartyData])
   
   const {
     register,
@@ -1105,7 +1161,7 @@ export default function HomePage() {
                       </button>
                       <button
                         type="submit"
-                        className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+                        className="px-8 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center space-x-2"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1548,7 +1604,7 @@ export default function HomePage() {
                   {/* Fill All Button */}
                   <button
                     onClick={fillFieldsFromSmarty}
-                    className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors font-semibold"
+                    className="w-full bg-gray-900 text-white py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors font-semibold"
                   >
                     Fill All Available Form Fields ({Object.keys(smartyData.data).length} attributes)
                   </button>
@@ -1557,11 +1613,19 @@ export default function HomePage() {
                 {/* 3D Interactive Street View Map */}
                 {smartyData.data.mapEmbedUrl && (
                   <div className="mt-6 p-4 bg-blue-50 border-t border-blue-200">
-                    <div className="mb-3">
-                      <h3 className="text-lg font-bold text-blue-900 mb-2">🗺️ Interactive 3D Street View</h3>
-                      <p className="text-sm text-blue-700">
-                        Drag to look around 360°, click arrows to move, zoom in/out to explore. Use this to count fuel dispensers (MPDs).
-                      </p>
+                    <div className="mb-3 flex justify-between items-start gap-4">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-blue-900 mb-2">🗺️ Interactive 3D Street View</h3>
+                        <p className="text-sm text-blue-700">
+                          Drag to look around 360°, click arrows to move, zoom in/out to explore. Use this to count fuel dispensers (MPDs).
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setShowAreaMeasurementTool(true)}
+                        className="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg font-medium transition-colors flex items-center gap-2 whitespace-nowrap"
+                      >
+                        📐 Measure Area
+                      </button>
                     </div>
                     
                     <div className="rounded-lg overflow-hidden border-2 border-blue-400 shadow-lg">
@@ -1615,6 +1679,19 @@ export default function HomePage() {
           )}
         </div>
       </div>
+
+      {/* Area Measurement Tool Modal */}
+      <AreaMeasurementModal
+        isOpen={showAreaMeasurementTool}
+        onClose={() => setShowAreaMeasurementTool(false)}
+        latitude={smartyData?.data?.latitude || smartyData?.latitude || 33.8551043}
+        longitude={smartyData?.data?.longitude || smartyData?.longitude || -84.2179044}
+        onAreaCalculated={(area) => {
+          setMeasuredArea(area)
+          console.log('Measured area:', area, 'sq ft')
+        }}
+      />
+
       </div>
     </div>
   )
