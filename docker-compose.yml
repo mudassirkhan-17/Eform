@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  convenience-store-app:
+    build: .
+    ports:
+      - "3001:3000"
+    environment:
+      - GHL_API_KEY=${GHL_API_KEY}
+      - GHL_LOCATION_ID=${GHL_LOCATION_ID}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+      - NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+      - SMARTY_AUTH_ID=${SMARTY_AUTH_ID}
+      - SMARTY_AUTH_TOKEN=${SMARTY_AUTH_TOKEN}
+    restart: always
+    container_name: convenience-store-app
