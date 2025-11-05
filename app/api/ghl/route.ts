@@ -31,11 +31,24 @@ export async function POST(request: NextRequest) {
       console.log('🔄 Updating existing opportunity:', resumedOpportunityId)
       console.log('   Contact ID:', resumedContactId)
       
+      // Validate required environment variables
+      if (!GHL_API_KEY || !GHL_LOCATION_ID) {
+        console.error('❌ GoHighLevel API credentials not configured')
+        return NextResponse.json(
+          { success: false, error: 'GoHighLevel not configured - API key or location ID missing' },
+          { status: 400 }
+        )
+      }
+      
+      // Type assertion: we've validated these exist above
+      const apiKey: string = GHL_API_KEY!
+      const locationId: string = GHL_LOCATION_ID!
+      
       // Update opportunity with new data
-      const opportunityId = await updateOpportunityWithData(resumedOpportunityId, resumedContactId, formData, GHL_API_KEY, GHL_LOCATION_ID)
+      const opportunityId = await updateOpportunityWithData(resumedOpportunityId, resumedContactId, formData, apiKey, locationId)
       
       // Add updated JSON as new note
-      await addFormDataAsNote(resumedContactId, formData, GHL_API_KEY, resumedOpportunityId)
+      await addFormDataAsNote(resumedContactId, formData, apiKey, resumedOpportunityId)
       
       return NextResponse.json({
         success: true,
