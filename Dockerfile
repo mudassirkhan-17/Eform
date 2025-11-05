@@ -14,6 +14,9 @@ COPY . .
 # Build Next.js
 RUN npm run build
 
+# Clear Next.js cache to prevent stale data
+RUN rm -rf .next/cache
+
 # Expose port
 EXPOSE 3000
 
